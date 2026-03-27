@@ -1,0 +1,17 @@
+profile: edtech
+tiers:
+  regulator: 1
+  company_site: 3
+  public_media: 4
+india_priority_sources:
+  - UGC, AICTE, NCVET, NSDC, and state education board references
+  - University, school, and enterprise training partnerships
+  - Course outcomes, learner reviews, app-store signals, and placement claims
+  - MCA / ROC records and public grant or skilling program references
+  - Indian education and startup media
+founder_signal_sources:
+  - MCA / ROC filings
+  - Public operator or academic leadership track record
+  - Startup India / DPIIT
+  - Public press and startup media
+search_provider: serper

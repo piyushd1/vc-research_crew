@@ -1,8 +1,16 @@
 profile: healthtech
 tiers:
   regulator: 1
+  company_site: 3
+  public_media: 4
 india_priority_sources:
-  - CDSCO and healthcare regulators
-  - Hospital / clinic partner references
-  - MCA / ROC records
+  - CDSCO, MoHFW, NHA, ABDM, and state healthcare regulators
+  - NABH, NABL, hospital, lab, insurer, and clinic partner references
+  - Clinical validation, medical publications, and protocol evidence
+  - MCA / ROC records and public provider or distribution partnerships
+founder_signal_sources:
+  - MCA / ROC filings
+  - Clinical, healthcare operator, or research background
+  - Medical publications and public speaking
+  - Public press and startup media
 search_provider: serper

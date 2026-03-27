@@ -25,7 +25,13 @@ def build_tools(
     if brief.docs_dir:
         docs_path = Path(brief.docs_dir)
         if docs_path.exists():
-            tools.extend([DirectoryManifestTool(), PDFExcerptTool(), CSVPreviewTool()])
+            tools.extend(
+                [
+                    DirectoryManifestTool(docs_root=str(docs_path)),
+                    PDFExcerptTool(docs_root=str(docs_path)),
+                    CSVPreviewTool(docs_root=str(docs_path)),
+                ]
+            )
 
     if source_profile.search_provider == "serper" and os.environ.get("SERPER_API_KEY"):
         try:

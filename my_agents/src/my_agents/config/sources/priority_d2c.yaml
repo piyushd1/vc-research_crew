@@ -1,0 +1,18 @@
+profile: d2c
+tiers:
+  company_site: 2
+  public_media: 3
+  startup_media: 4
+  public_web: 4
+india_priority_sources:
+  - Brand websites, product catalogues, pricing, and retention hooks
+  - Amazon, Flipkart, Nykaa, Blinkit, Zepto, and other marketplace listings or reviews
+  - App Store, Google Play, and social commerce evidence where relevant
+  - FSSAI, Legal Metrology, BIS, GST, and claims compliance signals
+  - Indian retail, commerce, and consumer brand media
+founder_signal_sources:
+  - MCA / ROC filings
+  - Marketplace seller, founder, and brand launch history
+  - Public consumer brand press and startup media
+  - NCLT / public legal databases
+search_provider: serper

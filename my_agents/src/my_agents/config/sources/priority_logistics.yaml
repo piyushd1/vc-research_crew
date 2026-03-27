@@ -1,0 +1,16 @@
+profile: logistics
+tiers:
+  regulator: 1
+  company_site: 3
+  public_media: 4
+india_priority_sources:
+  - GST, e-way bill, FASTag, DGFT, and logistics policy references
+  - Warehouse, fleet, and network footprint evidence
+  - Port, rail, air cargo, and trade corridor references where relevant
+  - Enterprise customers, channel partners, and distribution references
+  - MCA / ROC records and public operations disclosures
+founder_signal_sources:
+  - MCA / ROC filings
+  - Public operating experience and network-building history
+  - Public press and startup media
+search_provider: serper

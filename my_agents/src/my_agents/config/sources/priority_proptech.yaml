@@ -1,0 +1,16 @@
+profile: proptech
+tiers:
+  regulator: 1
+  company_site: 3
+  public_media: 4
+india_priority_sources:
+  - RERA portals, municipal approvals, and public project records
+  - Developer, broker, lender, and housing society partner references
+  - Public transaction, rental, or inventory datasets where available
+  - MCA / ROC records and land-title or approval process context
+  - Indian real-estate, housing, and startup media
+founder_signal_sources:
+  - MCA / ROC filings
+  - Public real-estate operating background and domain credibility
+  - NCLT / public legal databases
+search_provider: serper

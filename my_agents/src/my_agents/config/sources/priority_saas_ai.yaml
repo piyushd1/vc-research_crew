@@ -1,9 +1,16 @@
 profile: saas_ai
 tiers:
+  regulator: 2
   company_site: 3
   public_media: 4
 india_priority_sources:
-  - Company docs and pricing pages
+  - Company docs, pricing pages, trust centers, and product changelogs
+  - GitHub, developer docs, benchmark artifacts, and public demos
+  - Customer case studies, marketplace listings, and integration ecosystems
+  - Startup media, launch coverage, and technical communities
+founder_signal_sources:
+  - MCA / ROC filings
   - GitHub and technical artifacts
-  - Startup media and product launches
+  - Public operator history and product launches
+  - Public press and startup media
 search_provider: serper

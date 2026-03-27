@@ -1,0 +1,18 @@
+profile: agritech
+tiers:
+  regulator: 1
+  company_site: 3
+  public_media: 4
+india_priority_sources:
+  - Ministry of Agriculture, NABARD, eNAM, and Agri Stack policy references
+  - State agriculture departments, mandi data, and crop ecosystem bodies
+  - FPO, distributor, and agri-input partner references
+  - MCA / ROC records and lender or NBFC partnerships where relevant
+  - Field deployment evidence, procurement records, and on-ground channel checks
+founder_signal_sources:
+  - MCA / ROC filings
+  - NABARD and public agri ecosystem references
+  - Startup India / DPIIT
+  - Public press and startup media
+  - Linked public operator history excluding scraped social content
+search_provider: serper

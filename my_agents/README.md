@@ -12,6 +12,28 @@ It supports 3 output profiles:
 - `full_report`
 - `one_pager`
 
+It now includes India-first sector overlays and source packs for:
+- `fintech`
+- `saas_ai`
+- `consumer`
+- `d2c`
+- `healthtech`
+- `deeptech`
+- `climate`
+- `agritech`
+- `edtech`
+- `logistics`
+- `marketplaces`
+- `proptech`
+- `cybersecurity`
+
+Common aliases are also supported. For example:
+- `healthcare` resolves to `healthtech`
+- `d2c brands`, `consumer brands`, and `ecommerce` resolve to `d2c`
+- `deep-tech`, `spacetech`, and `defensetech` resolve to `deeptech`
+- `marketplace` resolves to `marketplaces`
+- `enterprise software`, `saas`, and `ai` resolve to `saas_ai`
+
 The app is designed around open-source LLMs only by default. Closed models are not allowed unless you explicitly change the model policy in [`config/llm.yaml`](/Users/piyushdev/Documents/Agents/crewAI/my_agents/src/my_agents/config/llm.yaml).
 
 It is ready to share as a normal CrewAI project: someone can clone this repo, install from [`requirements.txt`](/Users/piyushdev/Documents/Agents/crewAI/my_agents/requirements.txt), add their key to [`.env.example`](/Users/piyushdev/Documents/Agents/crewAI/my_agents/.env.example), and run the customized VC agent workflows.
@@ -71,12 +93,18 @@ allow_closed_models: false
 
 ## Environment
 
-Copy [`.env.example`](/Users/piyushdev/Documents/Agents/crewAI/my_agents/.env.example) to `.env` and only add the keys you want to use.
+Copy [`.env.example`](/Users/piyushdev/Documents/Agents/crewAI/my_agents/.env.example) to `.env` and only add the keys you want to use. The app auto-loads `my_agents/.env` at runtime.
 
 For an OpenRouter-backed open-source model:
 
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+For real web research, add:
+
+```env
+SERPER_API_KEY=your_serper_api_key_here
 ```
 
 For a fully local Ollama setup, no `.env` key is required by default.
@@ -121,6 +149,22 @@ questions:
   - Which India-specific regulatory risks matter most?
 ```
 
+Another valid example using the wider sector map:
+
+```yaml
+company_name: Example Consumer Brand
+website: https://example.com
+sector: d2c brands
+stage: series_a
+geography: India
+one_line: Omnichannel clean-label snack brand for urban Indian households.
+questions:
+  - How durable is repeat purchase and contribution margin after paid acquisition?
+  - Which India-specific compliance and distribution risks matter most?
+```
+
+If you use `docs_dir`, v1 accepts only `PDF` and `CSV` files.
+
 From the project folder:
 
 ```bash
@@ -131,6 +175,8 @@ cd /Users/piyushdev/Documents/Agents/crewAI/my_agents
   --output-profile ic_memo \
   --approve-mode auto
 ```
+
+You can override the default sector-based source pack with `--sources-profile`, for example `--sources-profile fintech`.
 
 For a one-pager:
 
@@ -152,10 +198,19 @@ For resume:
 
 Each run creates a versioned folder under `runs/{company_slug}/{timestamp}/` with:
 - `report.md`
-- `report.pdf` for `ic_memo` and `full_report`
+- `report.pdf` for `ic_memo` and `full_report` when the host machine has WeasyPrint system libraries available
 - `one_pager.html` for `one_pager`
 - `scorecard.json`
 - `sources.json`
 - `findings_bundle.json`
 - `run_state.json`
 - `findings/{agent_name}.json`
+
+## Test The Config
+
+Run the built-in checks with:
+
+```bash
+cd /Users/piyushdev/Documents/Agents/crewAI/my_agents
+.venv/bin/python -m unittest discover -s tests -v
+```
