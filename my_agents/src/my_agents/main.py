@@ -77,3 +77,7 @@ def test():
 
 def run_with_trigger():
     raise SystemExit("run_with_trigger is not implemented for this VC workflow app.")
+
+
+if __name__ == "__main__":
+    run()
