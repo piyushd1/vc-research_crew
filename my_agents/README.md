@@ -12,6 +12,28 @@ It supports 3 output profiles:
 - `full_report`
 - `one_pager`
 
+It now includes India-first sector overlays and source packs for:
+- `fintech`
+- `saas_ai`
+- `consumer`
+- `d2c`
+- `healthtech`
+- `deeptech`
+- `climate`
+- `agritech`
+- `edtech`
+- `logistics`
+- `marketplaces`
+- `proptech`
+- `cybersecurity`
+
+Common aliases are also supported. For example:
+- `healthcare` resolves to `healthtech`
+- `d2c brands`, `consumer brands`, and `ecommerce` resolve to `d2c`
+- `deep-tech`, `spacetech`, and `defensetech` resolve to `deeptech`
+- `marketplace` resolves to `marketplaces`
+- `enterprise software`, `saas`, and `ai` resolve to `saas_ai`
+
 The app is designed around open-source LLMs only by default. Closed models are not allowed unless you explicitly change the model policy in [`config/llm.yaml`](/Users/piyushdev/Documents/Agents/crewAI/my_agents/src/my_agents/config/llm.yaml).
 
 It is ready to share as a normal CrewAI project: someone can clone this repo, install from [`requirements.txt`](/Users/piyushdev/Documents/Agents/crewAI/my_agents/requirements.txt), add their key to [`.env.example`](/Users/piyushdev/Documents/Agents/crewAI/my_agents/.env.example), and run the customized VC agent workflows.
@@ -79,6 +101,12 @@ For an OpenRouter-backed open-source model:
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
 
+For real web research, add:
+
+```env
+SERPER_API_KEY=your_serper_api_key_here
+```
+
 For a fully local Ollama setup, no `.env` key is required by default.
 
 This project does not require embeddings or any closed-model provider out of the box. If you later choose to add embeddings, configure an OSS-compatible embedding model explicitly.
@@ -119,6 +147,20 @@ one_line: API infrastructure for credit underwriting.
 questions:
   - What is differentiated about the underwriting model?
   - Which India-specific regulatory risks matter most?
+```
+
+Another valid example using the wider sector map:
+
+```yaml
+company_name: Example Consumer Brand
+website: https://example.com
+sector: d2c brands
+stage: series_a
+geography: India
+one_line: Omnichannel clean-label snack brand for urban Indian households.
+questions:
+  - How durable is repeat purchase and contribution margin after paid acquisition?
+  - Which India-specific compliance and distribution risks matter most?
 ```
 
 If you use `docs_dir`, v1 accepts only `PDF` and `CSV` files.
@@ -163,3 +205,12 @@ Each run creates a versioned folder under `runs/{company_slug}/{timestamp}/` wit
 - `findings_bundle.json`
 - `run_state.json`
 - `findings/{agent_name}.json`
+
+## Test The Config
+
+Run the built-in checks with:
+
+```bash
+cd /Users/piyushdev/Documents/Agents/crewAI/my_agents
+.venv/bin/python -m unittest discover -s tests -v
+```

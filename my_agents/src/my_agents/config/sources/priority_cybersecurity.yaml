@@ -1,0 +1,17 @@
+profile: cybersecurity
+tiers:
+  regulator: 1
+  company_site: 2
+  public_media: 4
+india_priority_sources:
+  - CERT-In advisories and cyber incident reporting rules
+  - RBI, SEBI, IRDAI, and NPCI cyber circulars where applicable
+  - Product docs, GitHub repos, security disclosures, and trust-center material
+  - Enterprise references, channel partners, and procurement evidence
+  - MCA / ROC records and India data-residency or compliance claims
+founder_signal_sources:
+  - MCA / ROC filings
+  - GitHub and open-source security artifacts
+  - Conference talks, technical blogs, and public disclosures
+  - Public press and startup media
+search_provider: serper

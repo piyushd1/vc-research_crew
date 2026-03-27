@@ -9,6 +9,7 @@ The runnable project lives in [`my_agents/`](/Users/piyushdev/Documents/Agents/c
 - deterministic report generation
 - open-source LLMs only by default
 - configurable model backends such as OpenRouter OSS models or local Ollama models
+- broad sector coverage across fintech, SaaS/AI, D2C, consumer internet, healthtech, deeptech, climate, agritech, edtech, logistics, marketplaces, proptech, and cybersecurity
 
 ## What This Repo Contains
 
@@ -22,6 +23,24 @@ The runnable project lives in [`my_agents/`](/Users/piyushdev/Documents/Agents/c
 - `sourcing`
 - `due_diligence`
 - `portfolio`
+
+## Supported Sector Profiles
+
+- `fintech`
+- `saas_ai`
+- `consumer`
+- `d2c`
+- `healthtech`
+- `deeptech`
+- `climate`
+- `agritech`
+- `edtech`
+- `logistics`
+- `marketplaces`
+- `proptech`
+- `cybersecurity`
+
+Common aliases are accepted too, including `healthcare`, `d2c brands`, `deep-tech`, `marketplace`, and `enterprise software`.
 
 ## Supported Outputs
 

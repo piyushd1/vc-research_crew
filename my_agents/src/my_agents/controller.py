@@ -16,6 +16,7 @@ from my_agents.pdf_export import export_pdf
 from my_agents.renderers import render_full_report, render_ic_memo, render_one_pager
 from my_agents.runner import AgentRunner, CrewAIAgentRunner
 from my_agents.schemas import (
+    ALLOWED_SECTION_KEYS,
     AgentFindingResult,
     ApprovalAction,
     ApproveMode,
@@ -101,6 +102,12 @@ class VCResearchController:
             )
             if not isinstance(result, AgentFindingResult):
                 result = AgentFindingResult.model_validate(result.model_dump())
+            result = self._normalize_agent_result(
+                result=result,
+                agent_key=task.agent,
+                spec=config.agents[task.agent],
+                config=config,
+            )
 
             self._persist_agent_result(run_dir, result)
             evidence.add_result(result)
@@ -299,6 +306,29 @@ class VCResearchController:
                 + "\n"
             )
 
+        docs_block = ""
+        if brief.docs_dir:
+            docs_block = (
+                "Uploaded diligence docs are available.\n"
+                f"- Use ONLY this docs_dir when calling document tools: {brief.docs_dir}\n"
+                "- Do not inspect the broader filesystem. Prefer relative filenames from that directory.\n\n"
+            )
+
+        scoring_block = ""
+        if spec.scoring_dimensions:
+            scoring_block = (
+                "Your dimension_scores entries must use ONLY these configured dimensions:\n"
+                + "\n".join(f"- {item}" for item in spec.scoring_dimensions)
+                + "\n\n"
+            )
+
+        workflow_agent_ids = "\n".join(
+            f"- {workflow_task.agent}" for workflow_task in config.workflows[state.workflow.value].tasks
+        )
+        control_agent_ids = "\n".join(
+            f"- {name}" for name in ("evidence_auditor", "report_synthesizer")
+        )
+
         return (
             f"{injected_context}"
             f"You are {spec.role}.\n"
@@ -317,6 +347,13 @@ class VCResearchController:
             f"- Notes: {brief.notes or 'Not provided'}\n\n"
             f"Prior evidence summary:\n{evidence.summary()}\n\n"
             f"India-first source priorities:\n{source_notes}\n\n"
+            f"{docs_block}"
+            "When adding downstream_flags.for_agent, use ONLY these exact agent ids:\n"
+            f"{workflow_agent_ids}\n{control_agent_ids}\n\n"
+            f"{scoring_block}"
+            "Use suggested_section_keys only from this allowed set:\n"
+            + "\n".join(f"- {item}" for item in sorted(ALLOWED_SECTION_KEYS))
+            + "\n\n"
             f"{founder_signal_block}"
             "Produce a structured result with cited findings, confidence scores, open questions, "
             "dimension scores where relevant, and downstream flags only when another named agent "
@@ -548,6 +585,47 @@ class VCResearchController:
         findings_dir.mkdir(parents=True, exist_ok=True)
         finding_path = findings_dir / f"{result.agent_name}.json"
         finding_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+
+    def _normalize_agent_result(
+        self,
+        result: AgentFindingResult,
+        agent_key: str,
+        spec: object,
+        config: AppConfig,
+    ) -> AgentFindingResult:
+        allowed_agents = set(config.agents)
+        allowed_dimensions = set(getattr(spec, "scoring_dimensions", []))
+        normalized_flags = [
+            flag
+            for flag in result.downstream_flags
+            if flag.for_agent in allowed_agents
+        ]
+        normalized_scores = [
+            score
+            for score in result.dimension_scores
+            if not allowed_dimensions or score.dimension in allowed_dimensions
+        ]
+        normalized_sections = [
+            section_key
+            for section_key in result.suggested_section_keys
+            if section_key in ALLOWED_SECTION_KEYS
+        ]
+        normalized_sources = []
+        seen_sources: set[tuple[str, str]] = set()
+        for source in result.sources_checked:
+            source_key = (source.source_name, source.source_type)
+            if source_key in seen_sources:
+                continue
+            seen_sources.add(source_key)
+            normalized_sources.append(source)
+
+        payload = result.model_dump()
+        payload["agent_name"] = agent_key
+        payload["downstream_flags"] = [flag.model_dump() for flag in normalized_flags]
+        payload["dimension_scores"] = [score.model_dump() for score in normalized_scores]
+        payload["suggested_section_keys"] = normalized_sections
+        payload["sources_checked"] = [source.model_dump() for source in normalized_sources]
+        return AgentFindingResult.model_validate(payload)
 
     def _write_run_state(
         self,

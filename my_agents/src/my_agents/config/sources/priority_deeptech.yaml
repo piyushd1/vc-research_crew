@@ -1,0 +1,17 @@
+profile: deeptech
+tiers:
+  regulator: 1
+  company_site: 2
+  public_media: 4
+india_priority_sources:
+  - IP India, WIPO, and patent landscape references
+  - Google Scholar, Semantic Scholar, arXiv, and technical publications
+  - GitHub, benchmark reports, product docs, and technical demos
+  - MeitY, IN-SPACe, ISRO, DRDO, BIS, and certification bodies where relevant
+  - Public procurement, grant, and pilot deployment references
+founder_signal_sources:
+  - MCA / ROC filings
+  - IP India and technical publications
+  - GitHub and open-source artifacts
+  - Startup India / DPIIT and research-lab affiliations
+search_provider: serper

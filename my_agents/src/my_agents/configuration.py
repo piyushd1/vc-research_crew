@@ -24,6 +24,116 @@ PACKAGE_ROOT = Path(__file__).resolve().parent
 DEFAULT_CONFIG_DIR = PACKAGE_ROOT / "config"
 
 
+SECTOR_PROFILE_ALIASES = {
+    "agri": "agritech",
+    "agritech": "agritech",
+    "agriculture": "agritech",
+    "ai": "saas_ai",
+    "b2b_marketplace": "marketplaces",
+    "b2b_saas": "saas_ai",
+    "b2c_marketplace": "marketplaces",
+    "banking": "fintech",
+    "brands": "d2c",
+    "care_delivery": "healthtech",
+    "climate": "climate",
+    "climate_tech": "climate",
+    "climatetech": "climate",
+    "commerce": "d2c",
+    "construction_tech": "proptech",
+    "consumer": "consumer",
+    "consumer_brand": "d2c",
+    "consumer_brands": "d2c",
+    "consumer_internet": "consumer",
+    "content": "consumer",
+    "cyber_security": "cybersecurity",
+    "cybersecurity": "cybersecurity",
+    "deep_tech": "deeptech",
+    "deeptech": "deeptech",
+    "defence": "deeptech",
+    "defencetech": "deeptech",
+    "defense": "deeptech",
+    "defensetech": "deeptech",
+    "developer_tools": "saas_ai",
+    "devtools": "saas_ai",
+    "diagnostics": "healthtech",
+    "d2c": "d2c",
+    "d2c_brand": "d2c",
+    "d2c_brands": "d2c",
+    "e_commerce": "d2c",
+    "ecommerce": "d2c",
+    "edtech": "edtech",
+    "education": "edtech",
+    "energy": "climate",
+    "enterprise": "saas_ai",
+    "enterprise_software": "saas_ai",
+    "ev": "climate",
+    "farmtech": "agritech",
+    "fashion": "d2c",
+    "fintech": "fintech",
+    "food_brand": "d2c",
+    "genai": "saas_ai",
+    "health_care": "healthtech",
+    "health_tech": "healthtech",
+    "healthcare": "healthtech",
+    "healthtech": "healthtech",
+    "housing": "proptech",
+    "industrial_ai": "deeptech",
+    "insurtech": "fintech",
+    "infosec": "cybersecurity",
+    "it_services": "saas_ai",
+    "last_mile": "logistics",
+    "lending": "fintech",
+    "logistics": "logistics",
+    "marketplace": "marketplaces",
+    "marketplaces": "marketplaces",
+    "materials": "deeptech",
+    "medtech": "healthtech",
+    "mobility": "logistics",
+    "payment_infra": "fintech",
+    "payments": "fintech",
+    "pharma_tech": "healthtech",
+    "proptech": "proptech",
+    "real_estate": "proptech",
+    "retail_brand": "d2c",
+    "retail_brands": "d2c",
+    "robotics": "deeptech",
+    "saas": "saas_ai",
+    "saas_ai": "saas_ai",
+    "security": "cybersecurity",
+    "security_software": "cybersecurity",
+    "semiconductor": "deeptech",
+    "social_commerce": "consumer",
+    "software": "saas_ai",
+    "space": "deeptech",
+    "spacetech": "deeptech",
+    "supply_chain": "logistics",
+    "supplychain": "logistics",
+    "sustainability": "climate",
+    "upskilling": "edtech",
+    "warehousing": "logistics",
+    "wealthtech": "fintech",
+}
+
+
+def normalize_profile_key(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    for needle, replacement in (("&", " and "), ("/", "_"), ("-", "_"), (" ", "_")):
+        normalized = normalized.replace(needle, replacement)
+    while "__" in normalized:
+        normalized = normalized.replace("__", "_")
+    normalized = normalized.strip("_")
+    return normalized or None
+
+
+def canonicalize_profile_key(value: str | None) -> str | None:
+    normalized = normalize_profile_key(value)
+    if normalized is None:
+        return None
+    return SECTOR_PROFILE_ALIASES.get(normalized, normalized)
+
+
 @dataclass
 class AppConfig:
     config_dir: Path
@@ -34,14 +144,16 @@ class AppConfig:
     scorecard_overlays: dict[str, dict[str, int]]
     source_base: SourcePriorityConfig
     source_overlays: dict[str, SourcePriorityConfig]
+    sector_aliases: dict[str, str]
     llm: LLMConfig
     integrations: IntegrationsConfig
     warnings: list[str]
 
     def resolve_score_weights(self, sector: str | None) -> dict[str, int]:
         resolved = dict(self.scorecard_base)
-        if sector and sector in self.scorecard_overlays:
-            resolved.update(self.scorecard_overlays[sector])
+        resolved_sector = canonicalize_profile_key(sector)
+        if resolved_sector and resolved_sector in self.scorecard_overlays:
+            resolved.update(self.scorecard_overlays[resolved_sector])
         return resolved
 
     def resolve_source_profile(
@@ -50,14 +162,20 @@ class AppConfig:
         profile_override: str | None = None,
     ) -> SourcePriorityConfig:
         base_payload = self.source_base.model_dump()
-        selected_profile = profile_override or sector
-        if profile_override and profile_override != "base" and profile_override not in self.source_overlays:
+        resolved_override = canonicalize_profile_key(profile_override)
+        selected_profile = resolved_override or canonicalize_profile_key(sector)
+        if (
+            resolved_override
+            and resolved_override != "base"
+            and resolved_override not in self.source_overlays
+        ):
             raise ValueError(
                 f"Unknown sources profile '{profile_override}'. Available profiles: "
                 + ", ".join(["base", *sorted(self.source_overlays)])
             )
         if selected_profile and selected_profile in self.source_overlays:
             overlay_payload = self.source_overlays[selected_profile].model_dump(exclude_unset=True)
+            base_payload["profile"] = selected_profile
             base_payload["tiers"].update(overlay_payload.get("tiers", {}))
             for field in ("india_priority_sources", "founder_signal_sources"):
                 if overlay_payload.get(field):
@@ -159,18 +277,21 @@ def validate_app_config(config: AppConfig) -> list[str]:
 
 def load_app_config(config_dir: Path | None = None) -> AppConfig:
     resolved_config_dir = (config_dir or DEFAULT_CONFIG_DIR).resolve()
+    scorecard_base, scorecard_overlays = _load_scorecards(resolved_config_dir)
+    source_base, source_overlays = _load_sources(resolved_config_dir)
     config = AppConfig(
         config_dir=resolved_config_dir,
         agents=_load_agents(resolved_config_dir),
         workflows=_load_workflows(resolved_config_dir),
         output_profiles=_load_output_profiles(resolved_config_dir),
-        scorecard_base={str(key): int(value) for key, value in _load_scorecards(resolved_config_dir)[0].items()},
+        scorecard_base={str(key): int(value) for key, value in scorecard_base.items()},
         scorecard_overlays={
             name: {str(key): int(value) for key, value in overlay.items()}
-            for name, overlay in _load_scorecards(resolved_config_dir)[1].items()
+            for name, overlay in scorecard_overlays.items()
         },
-        source_base=_load_sources(resolved_config_dir)[0],
-        source_overlays=_load_sources(resolved_config_dir)[1],
+        source_base=source_base,
+        source_overlays=source_overlays,
+        sector_aliases=dict(SECTOR_PROFILE_ALIASES),
         llm=LLMConfig.model_validate(load_yaml(resolved_config_dir / "llm.yaml")),
         integrations=IntegrationsConfig.model_validate(
             load_yaml(resolved_config_dir / "integrations.yaml")
