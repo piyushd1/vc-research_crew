@@ -137,6 +137,9 @@ testpaths = [
     "lib/crewai-files/tests",
     "my_agents/tests",
 ]
+pythonpath = [
+    "my_agents/src",
+]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "--tb=short -n auto --timeout=60 --dist=loadfile --max-worker-restart=2 --block-network --import-mode=importlib"

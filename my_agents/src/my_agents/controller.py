@@ -70,6 +70,37 @@ class VCResearchController:
     def run(self, request: RunRequest) -> RunArtifacts:
         self._load_project_env()
         config = load_app_config(request.config_dir or DEFAULT_CONFIG_DIR)
+        
+        if request.eval_only_dir:
+            run_dir = Path(request.eval_only_dir).resolve()
+            bundle_path = run_dir / "findings_bundle.json"
+            if not bundle_path.exists():
+                raise FileNotFoundError(f"findings_bundle.json not found in {run_dir}. Cannot evaluate.")
+            
+            from my_agents.schemas import FindingsBundle, Brief
+            bundle = FindingsBundle.model_validate_json(bundle_path.read_text(encoding="utf-8"))
+            brief = Brief(company_name=bundle.company_name, sector="general", geography="India")
+            
+            self.print_fn(f"\nEvaluating existing run: {run_dir}")
+            from my_agents.evals.judge import evaluate_run
+            try:
+                rubric = evaluate_run(brief, bundle, config, runner=self.runner, verbose=request.verbose)
+                eval_path = run_dir / "eval_score.json"
+                eval_path.write_text(rubric.model_dump_json(indent=2), encoding="utf-8")
+                self.print_fn(f"Evaluation Complete! Score: {rubric.final_eval_score}/100")
+                self.print_fn(f"Feedback: {rubric.summary_feedback}")
+            except Exception as ev_exc:
+                self.print_fn(f"Warning: Evals skipped due to error: {ev_exc}")
+                
+            return RunArtifacts(
+                run_dir=run_dir,
+                report_path=run_dir / "report.md",
+                scorecard_path=run_dir / "scorecard.json",
+                sources_path=run_dir / "sources.json",
+                run_state_path=run_dir / "run_state.json",
+                bundle_path=bundle_path,
+            )
+            
         for warning in config.warnings:
             self.print_fn(f"Warning: {warning}")
 
@@ -78,6 +109,7 @@ class VCResearchController:
         
         logger = logging.getLogger(f"vc_research.{state.company_name}")
         logger.setLevel(logging.INFO)
+        fh = None
         if not logger.handlers:
             fh = logging.FileHandler(run_dir / "execution.log", encoding="utf-8")
             fh.setFormatter(JSONFormatter())
@@ -233,12 +265,26 @@ class VCResearchController:
             )
         except Exception as exc:
             self.print_fn(f"Warning: Linear push skipped due to error: {exc}")
+            
+        if request.run_evals or request.eval_only_dir:
+            self.print_fn("\nRunning VC Evaluation Judge...")
+            logger.info("Starting subjective evaluations", extra={"step": "evaluate"})
+            from my_agents.evals.judge import evaluate_run
+            try:
+                rubric = evaluate_run(brief, bundle, config, runner=self.runner, verbose=request.verbose)
+                eval_path = run_dir / "eval_score.json"
+                eval_path.write_text(rubric.model_dump_json(indent=2), encoding="utf-8")
+                self.print_fn(f"Evaluation Complete! Score: {rubric.final_eval_score}/100")
+                self.print_fn(f"Feedback: {rubric.summary_feedback}")
+            except Exception as ev_exc:
+                self.print_fn(f"Warning: Evals skipped due to error: {ev_exc}")
+            
         self._update_latest_symlink(run_dir)
         logger.info("Run finished", extra={"step": "finish"})
 
-        for handler in list(logger.handlers):
-            handler.close()
-            logger.removeHandler(handler)
+        if fh:
+            fh.close()
+            logger.removeHandler(fh)
 
         return RunArtifacts(
             run_dir=run_dir,

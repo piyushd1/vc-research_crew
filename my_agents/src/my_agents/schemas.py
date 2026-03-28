@@ -106,6 +106,7 @@ class LLMConfig(BaseModel):
             "nemotron",
         ]
     )
+    eval_model: str | None = None
 
 
 class LinearConfig(BaseModel):
@@ -248,6 +249,18 @@ class WorkflowTaskDefinition(BaseModel):
     objective: str
     checkpoint: bool = False
 
+class FindingEval(BaseModel):
+    finding_claim: str
+    is_hallucination: bool
+    rationale: str
+
+class VCRubric(BaseModel):
+    relevance_score: int = Field(ge=1, le=10)
+    tone_score: int = Field(ge=1, le=10)
+    hallucinations: list[FindingEval] = Field(default_factory=list)
+    negative_constraint_violations: list[str] = Field(default_factory=list)
+    final_eval_score: int = Field(ge=0, le=100)
+    summary_feedback: str
 
 class WorkflowConfig(BaseModel):
     workflow: WorkflowType
@@ -323,6 +336,8 @@ class RunRequest(BaseModel):
     company_name: str | None = None
     focus_instructions: str | None = None
     exclude_instructions: str | None = None
+    run_evals: bool = False
+    eval_only_dir: Path | None = None
 
     @model_validator(mode="after")
     def validate_run_request(self) -> "RunRequest":
