@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime, timezone
 import os
 from pathlib import Path
@@ -266,12 +267,13 @@ class VCResearchController:
     def _configure_local_crewai_environment(self, run_dir: Path) -> None:
         project_root = self.project_root or Path(__file__).resolve().parents[2]
         local_home = project_root / ".crewai-home"
-        xdg_data_home = project_root / ".local" / "share"
         local_home.mkdir(parents=True, exist_ok=True)
-        xdg_data_home.mkdir(parents=True, exist_ok=True)
-        os.environ["HOME"] = str(local_home)
-        os.environ["XDG_DATA_HOME"] = str(xdg_data_home)
         os.environ["CREWAI_STORAGE_DIR"] = project_root.name
+        if sys.platform != "win32":
+            xdg_data_home = project_root / ".local" / "share"
+            xdg_data_home.mkdir(parents=True, exist_ok=True)
+            os.environ["HOME"] = str(local_home)
+            os.environ["XDG_DATA_HOME"] = str(xdg_data_home)
 
     def _build_specialist_prompt(
         self,
@@ -661,9 +663,15 @@ class VCResearchController:
 
     def _update_latest_symlink(self, run_dir: Path) -> None:
         latest_link = run_dir.parent / "latest"
-        if latest_link.exists() or latest_link.is_symlink():
-            latest_link.unlink()
-        latest_link.symlink_to(run_dir.name)
+        try:
+            if latest_link.exists() or latest_link.is_symlink():
+                latest_link.unlink()
+            latest_link.symlink_to(run_dir.name)
+        except OSError:
+            self.print_fn(
+                f"Warning: Could not create 'latest' symlink at {latest_link}. "
+                "On Windows, symlinks may require developer mode or admin privileges."
+            )
 
     @staticmethod
     def _slugify(value: str) -> str:
