@@ -266,7 +266,7 @@ class VCResearchController:
         except Exception as exc:
             self.print_fn(f"Warning: Linear push skipped due to error: {exc}")
             
-        if request.run_evals or request.eval_only_dir:
+        if request.run_evals:
             self.print_fn("\nRunning VC Evaluation Judge...")
             logger.info("Starting subjective evaluations", extra={"step": "evaluate"})
             from my_agents.evals.judge import evaluate_run
