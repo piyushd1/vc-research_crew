@@ -567,6 +567,7 @@ class VCResearchController:
         audit: AuditResult,
         scorecard: ScorecardSummary,
     ) -> FindingsBundle:
+        all_findings = evidence.findings()
         summaries = [result.summary for result in state.findings.values()]
         top_risks = [issue.detail for issue in audit.issues[:3]]
         
@@ -611,7 +612,7 @@ class VCResearchController:
                 for dimension in scorecard.dimensions
             ),
             "top_signals": "\n".join(
-                f"- {finding.claim}" for finding in evidence.findings()[:3]
+                f"- {finding.claim}" for finding in all_findings[:3]
             )
             or "No signals recorded.",
             "top_risks": "\n".join(f"- {risk}" for risk in top_risks) or "No risks recorded.",
@@ -632,7 +633,7 @@ class VCResearchController:
             summary="\n".join(summaries) or "No findings were generated.",
             sections=sections,
             scorecard=scorecard,
-            top_signals=[finding.claim for finding in evidence.findings()[:3]],
+            top_signals=[finding.claim for finding in all_findings[:3]],
             top_risks=top_risks,
             open_questions=combine_open_questions(state.findings.values()),
             evidence_gaps=audit.gaps,
