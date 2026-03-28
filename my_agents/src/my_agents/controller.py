@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from datetime import datetime, timezone
 import os
@@ -37,6 +38,20 @@ from my_agents.schemas import (
 from my_agents.tools import build_tools
 
 
+class JSONFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        data = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "name": record.name,
+        }
+        if hasattr(record, "step"):
+            data["step"] = getattr(record, "step")
+        if hasattr(record, "agent"):
+            data["agent"] = getattr(record, "agent")
+        return json.dumps(data)
+
 class VCResearchController:
     def __init__(
         self,
@@ -60,6 +75,16 @@ class VCResearchController:
 
         brief, run_dir, state = self._prepare_run_context(config, request)
         self._configure_local_crewai_environment(run_dir)
+        
+        logger = logging.getLogger(f"vc_research.{state.company_name}")
+        logger.setLevel(logging.INFO)
+        if not logger.handlers:
+            fh = logging.FileHandler(run_dir / "execution.log", encoding="utf-8")
+            fh.setFormatter(JSONFormatter())
+            logger.addHandler(fh)
+            
+        logger.info(f"Initialized run for {state.company_name}", extra={"step": "init"})
+
         selected_profile = state.output_profile
         llm = build_llm(config.llm)
         workflow = config.workflows[state.workflow.value]
@@ -92,6 +117,10 @@ class VCResearchController:
             )
             tools = build_tools(brief, source_profile, task.agent)
             self._write_run_state(run_dir, state, workflow)
+            
+            logger.info(f"Starting agent: {task.agent}", extra={"step": "agent_start", "agent": task.agent})
+            self.print_fn(f"\n[bold green]Starting Agent: {task.agent}[/]")
+            
             result = self.runner.run_agent(
                 agent_name=task.agent,
                 spec=config.agents[task.agent],
@@ -113,6 +142,11 @@ class VCResearchController:
             self._persist_agent_result(run_dir, result)
             evidence.add_result(result)
             state.findings[task.agent] = result
+            
+            logger.info(
+                f"Completed agent: {task.agent}", 
+                extra={"step": "agent_complete", "agent": task.agent}
+            )
             state.completed_agents.append(
                 CompletedAgentState(
                     agent_name=task.agent,
@@ -134,8 +168,10 @@ class VCResearchController:
                 state.last_updated = self.now_fn()
                 self._write_run_state(run_dir, state, workflow)
                 if action == ApprovalAction.ABORT:
+                    logger.warning("Run aborted at manual checkpoint", extra={"step": "checkpoint", "agent": task.agent})
                     raise SystemExit("Run aborted at manual checkpoint.")
 
+        logger.info("Starting synthesis and audit", extra={"step": "synthesis"})
         audit = self._run_evidence_audit(config, llm, evidence, request.verbose)
         bundle = self._run_report_synthesizer(
             config=config,
@@ -198,6 +234,11 @@ class VCResearchController:
         except Exception as exc:
             self.print_fn(f"Warning: Linear push skipped due to error: {exc}")
         self._update_latest_symlink(run_dir)
+        logger.info("Run finished", extra={"step": "finish"})
+
+        for handler in list(logger.handlers):
+            handler.close()
+            logger.removeHandler(handler)
 
         return RunArtifacts(
             run_dir=run_dir,
@@ -434,7 +475,7 @@ class VCResearchController:
         verbose: bool,
     ) -> FindingsBundle:
         scorecard = self._build_scorecard(list(state.findings.values()), weights)
-        fallback_bundle = self._build_fallback_bundle(brief, state, evidence, audit, scorecard)
+        fallback_bundle = self._build_fallback_bundle(config, brief, state, evidence, audit, scorecard)
         prompt = (
             "Synthesize the VC diligence record into a structured findings bundle.\n\n"
             f"Company: {brief.company_name}\n"
@@ -473,6 +514,7 @@ class VCResearchController:
 
     def _build_fallback_bundle(
         self,
+        config: AppConfig,
         brief: Brief,
         state: RunState,
         evidence: EvidenceRegistry,
@@ -481,7 +523,8 @@ class VCResearchController:
     ) -> FindingsBundle:
         summaries = [result.summary for result in state.findings.values()]
         top_risks = [issue.detail for issue in audit.issues[:3]]
-        sections = {
+        
+        all_sections = {
             "executive_summary": "\n".join(summaries[:3]) or "No executive summary available.",
             "company_snapshot": state.findings.get("startup_sourcer", None).summary
             if state.findings.get("startup_sourcer")
@@ -533,6 +576,10 @@ class VCResearchController:
             "evidence_gaps": "\n".join(f"- {gap}" for gap in audit.gaps) or "No evidence gaps recorded.",
             "next_steps": "Validate unresolved open questions and decide whether to proceed, pass, or monitor.",
         }
+
+        profile_sections = config.output_profiles[state.output_profile.value].sections
+        sections = {k: v for k, v in all_sections.items() if k in profile_sections}
+
         return FindingsBundle(
             company_name=brief.company_name,
             workflow=state.workflow,
