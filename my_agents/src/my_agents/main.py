@@ -85,9 +85,5 @@ def test():
     raise SystemExit("Use the project test suite instead of the starter template command.")
 
 
-def run_with_trigger():
-    raise SystemExit("run_with_trigger is not implemented for this VC workflow app.")
-
-
 if __name__ == "__main__":
     run()
