@@ -320,7 +320,12 @@ class SingleStoreSearchTool(BaseTool):
                         )
 
                     # Get column information for each table
-                    cursor.execute(f"SHOW COLUMNS FROM {table}")
+                    cursor.execute(
+                        "SELECT column_name, column_type "
+                        "FROM information_schema.columns "
+                        "WHERE table_name = %s AND table_schema = DATABASE()",
+                        (table,),
+                    )
                     columns = cursor.fetchall()
                     column_info = ", ".join(f"{row[0]} {row[1]}" for row in columns)
                     table_definitions.append(f"{table}({column_info})")
