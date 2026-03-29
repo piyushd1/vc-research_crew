@@ -13,7 +13,6 @@ dependencies = [
 [project.scripts]
 my_agents = "my_agents.main:run"
 run_crew = "my_agents.main:run"
-train = "my_agents.main:train"
 replay = "my_agents.main:replay"
 test = "my_agents.main:test"
 

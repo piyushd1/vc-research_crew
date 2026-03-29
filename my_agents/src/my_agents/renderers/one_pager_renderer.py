@@ -166,7 +166,7 @@ def render_one_pager(bundle: FindingsBundle) -> str:
         "portfolio_health": "Portfolio Health",
         "support_recommendations": "Support Recommendations",
     }
-    
+
     extra_cards = []
     for key, title in optional_sections.items():
         if key in bundle.sections:
@@ -176,7 +176,7 @@ def render_one_pager(bundle: FindingsBundle) -> str:
         <p>{escape(bundle.sections[key])}</p>
       </article>'''
             )
-            
+
     if extra_cards:
         # Group cards into chunks of 3 for the grid
         chunks = [extra_cards[i:i + 3] for i in range(0, len(extra_cards), 3)]

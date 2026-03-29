@@ -134,6 +134,20 @@ class Brief(BaseModel):
     focus_instructions: str | None = None
     exclude_instructions: str | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def set_defaults(cls, data: dict) -> dict:
+        if isinstance(data, dict):
+            if data.get("sector") is None:
+                data["sector"] = "general"
+            if data.get("stage") is None:
+                data["stage"] = "unknown"
+            if data.get("geography") is None:
+                data["geography"] = "India"
+            if data.get("website") is None:
+                data["website"] = "Unknown"
+        return data
+
     @field_validator("docs_dir")
     @classmethod
     def validate_docs_dir(cls, value: str | None) -> str | None:
@@ -340,7 +354,7 @@ class RunRequest(BaseModel):
     eval_only_dir: Path | None = None
 
     @model_validator(mode="after")
-    def validate_run_request(self) -> "RunRequest":
+    def validate_run_request(self) -> RunRequest:
         if self.resume is None:
             has_brief = self.brief_path is not None
             has_company = self.company_name is not None

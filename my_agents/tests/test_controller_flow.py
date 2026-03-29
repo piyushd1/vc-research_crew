@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import patch
 
 from my_agents.controller import VCResearchController
@@ -15,8 +15,8 @@ from my_agents.schemas import (
     FindingsBundle,
     OutputProfile,
     RunRequest,
-    ScorecardSummary,
     RunState,
+    ScorecardSummary,
     WorkflowType,
 )
 
@@ -121,7 +121,7 @@ class ControllerFlowTests(unittest.TestCase):
             self.assertTrue(artifacts.one_pager_path is not None and artifacts.one_pager_path.exists())
         else:
             self.assertTrue(artifacts.pdf_path is None or artifacts.pdf_path.exists())  # PDF can fail but shouldn't crash
-            
+
     # Matrix tests: 3 workflows X 3 profiles
     def test_sourcing_ic_memo(self) -> None:
         self.run_workflow_profile_test(WorkflowType.SOURCING, OutputProfile.IC_MEMO)
@@ -178,30 +178,30 @@ class ControllerFlowTests(unittest.TestCase):
             company_name="ResumeCo",
             approve_mode=ApproveMode.AUTO,
         )
-        
+
         with patch("my_agents.controller.build_llm", return_value=object()):
             with self.assertRaisesRegex(RuntimeError, "Simulated failure in founder_signal_analyst"):
                 controller1.run(request1)
-                
+
         # Find the run_dir
         runs_dir = self.project_root / "runs" / "resumeco"
         subdirs = list(runs_dir.iterdir())
         self.assertEqual(len(subdirs), 1)
         run_dir = subdirs[0]
-        
+
         state1 = RunState.model_validate_json((run_dir / "run_state.json").read_text("utf-8"))
         self.assertIn("founder_signal_analyst", state1.pending_agents)
-        
+
         # Now resume
         controller2 = VCResearchController(
             runner=FakeRunner(),  # No failure this time
             project_root=self.project_root,
         )
         request2 = RunRequest(resume=run_dir, approve_mode=ApproveMode.AUTO)
-        
+
         with patch("my_agents.controller.build_llm", return_value=object()):
             artifacts = controller2.run(request2)
-            
+
         self.assertTrue(artifacts.report_path.exists())
         state2 = RunState.model_validate_json(artifacts.run_state_path.read_text("utf-8"))
         self.assertEqual(len(state2.pending_agents), 0)
