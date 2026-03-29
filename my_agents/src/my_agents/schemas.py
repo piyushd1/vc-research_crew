@@ -340,7 +340,7 @@ class RunRequest(BaseModel):
     eval_only_dir: Path | None = None
 
     @model_validator(mode="after")
-    def validate_run_request(self) -> "RunRequest":
+    def validate_run_request(self) -> RunRequest:
         if self.resume is None:
             has_brief = self.brief_path is not None
             has_company = self.company_name is not None

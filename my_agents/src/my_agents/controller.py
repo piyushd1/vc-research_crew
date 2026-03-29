@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import datetime, timezone
 import json
 import logging
-import sys
-from datetime import datetime, timezone
 import os
 from pathlib import Path
-from typing import Callable
+import sys
 
 from dotenv import load_dotenv
 
-from my_agents.configuration import DEFAULT_CONFIG_DIR, AppConfig, load_app_config, load_brief
+from my_agents.configuration import (
+    DEFAULT_CONFIG_DIR,
+    AppConfig,
+    load_app_config,
+    load_brief,
+)
 from my_agents.evidence import EvidenceRegistry, combine_open_questions
 from my_agents.integrations.linear_push import push_linear_issue
 from my_agents.llm_policy import build_llm
@@ -47,9 +52,9 @@ class JSONFormatter(logging.Formatter):
             "name": record.name,
         }
         if hasattr(record, "step"):
-            data["step"] = getattr(record, "step")
+            data["step"] = record.step
         if hasattr(record, "agent"):
-            data["agent"] = getattr(record, "agent")
+            data["agent"] = record.agent
         return json.dumps(data)
 
 class VCResearchController:
@@ -70,17 +75,17 @@ class VCResearchController:
     def run(self, request: RunRequest) -> RunArtifacts:
         self._load_project_env()
         config = load_app_config(request.config_dir or DEFAULT_CONFIG_DIR)
-        
+
         if request.eval_only_dir:
             run_dir = Path(request.eval_only_dir).resolve()
             bundle_path = run_dir / "findings_bundle.json"
             if not bundle_path.exists():
                 raise FileNotFoundError(f"findings_bundle.json not found in {run_dir}. Cannot evaluate.")
-            
-            from my_agents.schemas import FindingsBundle, Brief
+
+            from my_agents.schemas import Brief, FindingsBundle
             bundle = FindingsBundle.model_validate_json(bundle_path.read_text(encoding="utf-8"))
             brief = Brief(company_name=bundle.company_name, sector="general", geography="India")
-            
+
             self.print_fn(f"\nEvaluating existing run: {run_dir}")
             from my_agents.evals.judge import evaluate_run
             try:
@@ -91,7 +96,7 @@ class VCResearchController:
                 self.print_fn(f"Feedback: {rubric.summary_feedback}")
             except Exception as ev_exc:
                 self.print_fn(f"Warning: Evals skipped due to error: {ev_exc}")
-                
+
             return RunArtifacts(
                 run_dir=run_dir,
                 report_path=run_dir / "report.md",
@@ -100,13 +105,13 @@ class VCResearchController:
                 run_state_path=run_dir / "run_state.json",
                 bundle_path=bundle_path,
             )
-            
+
         for warning in config.warnings:
             self.print_fn(f"Warning: {warning}")
 
         brief, run_dir, state = self._prepare_run_context(config, request)
         self._configure_local_crewai_environment(run_dir)
-        
+
         logger = logging.getLogger(f"vc_research.{state.company_name}")
         logger.setLevel(logging.INFO)
         fh = None
@@ -114,7 +119,7 @@ class VCResearchController:
             fh = logging.FileHandler(run_dir / "execution.log", encoding="utf-8")
             fh.setFormatter(JSONFormatter())
             logger.addHandler(fh)
-            
+
         logger.info(f"Initialized run for {state.company_name}", extra={"step": "init"})
 
         selected_profile = state.output_profile
@@ -149,10 +154,10 @@ class VCResearchController:
             )
             tools = build_tools(brief, source_profile, task.agent)
             self._write_run_state(run_dir, state, workflow)
-            
+
             logger.info(f"Starting agent: {task.agent}", extra={"step": "agent_start", "agent": task.agent})
             self.print_fn(f"\n[bold green]Starting Agent: {task.agent}[/]")
-            
+
             result = self.runner.run_agent(
                 agent_name=task.agent,
                 spec=config.agents[task.agent],
@@ -174,9 +179,9 @@ class VCResearchController:
             self._persist_agent_result(run_dir, result)
             evidence.add_result(result)
             state.findings[task.agent] = result
-            
+
             logger.info(
-                f"Completed agent: {task.agent}", 
+                f"Completed agent: {task.agent}",
                 extra={"step": "agent_complete", "agent": task.agent}
             )
             state.completed_agents.append(
@@ -265,7 +270,7 @@ class VCResearchController:
             )
         except Exception as exc:
             self.print_fn(f"Warning: Linear push skipped due to error: {exc}")
-            
+
         if request.run_evals:
             self.print_fn("\nRunning VC Evaluation Judge...")
             logger.info("Starting subjective evaluations", extra={"step": "evaluate"})
@@ -278,7 +283,7 @@ class VCResearchController:
                 self.print_fn(f"Feedback: {rubric.summary_feedback}")
             except Exception as ev_exc:
                 self.print_fn(f"Warning: Evals skipped due to error: {ev_exc}")
-            
+
         self._update_latest_symlink(run_dir)
         logger.info("Run finished", extra={"step": "finish"})
 
@@ -331,9 +336,9 @@ class VCResearchController:
         elif request.company_name:
             brief = Brief(
                 company_name=request.company_name,
-                sector=request.sector,
-                stage=request.stage,
-                geography=request.geography,
+                sector=request.sector or "general",
+                stage=request.stage or "unknown",
+                geography=request.geography or "India",
                 focus_instructions=request.focus_instructions,
                 exclude_instructions=request.exclude_instructions,
             )
@@ -570,7 +575,7 @@ class VCResearchController:
         all_findings = evidence.findings()
         summaries = [result.summary for result in state.findings.values()]
         top_risks = [issue.detail for issue in audit.issues[:3]]
-        
+
         all_sections = {
             "executive_summary": "\n".join(summaries[:3]) or "No executive summary available.",
             "company_snapshot": state.findings.get("startup_sourcer", None).summary

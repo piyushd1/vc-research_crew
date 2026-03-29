@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+from pathlib import Path
 import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import patch
 
 from my_agents.main import run
 from my_agents.schemas import (
     AgentFindingResult,
     AuditResult,
-    FindingsBundle,
     FindingRecord,
+    FindingsBundle,
     ScorecardSummary,
-    WorkflowType,
     VCRubric,
+    WorkflowType,
 )
 
 

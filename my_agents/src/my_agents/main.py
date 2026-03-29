@@ -63,13 +63,10 @@ def run(argv: list[str] | None = None):
         eval_only_dir=args.eval_only_dir,
     )
     artifacts = VCResearchController().run(request)
-    print(f"Run complete: {artifacts.run_dir}")
-    print(f"Report: {artifacts.report_path}")
-    print(f"Scorecard: {artifacts.scorecard_path}")
     if artifacts.one_pager_path:
-        print(f"One-pager: {artifacts.one_pager_path}")
+        pass
     if artifacts.pdf_path:
-        print(f"PDF: {artifacts.pdf_path}")
+        pass
     return artifacts
 
 
