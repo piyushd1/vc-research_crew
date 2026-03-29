@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 from my_agents.schemas import (
     AgentFindingResult,
@@ -25,8 +25,10 @@ class EvidenceRegistry:
     source_profile: SourcePriorityConfig
     findings_by_agent: dict[str, AgentFindingResult] = field(default_factory=dict)
     _claims: dict[str, list[FindingRecord]] = field(default_factory=lambda: defaultdict(list))
+    _findings_cache: list[FindingRecord] | None = field(default=None, repr=False, init=False)
 
     def add_result(self, result: AgentFindingResult) -> None:
+        self._findings_cache = None
         self.findings_by_agent[result.agent_name] = result
         for finding in result.findings:
             claim_key = _normalize_key(finding)
@@ -50,11 +52,13 @@ class EvidenceRegistry:
             record.conflict_level = conflict_level
 
     def findings(self) -> list[FindingRecord]:
-        return [
-            finding
-            for result in self.findings_by_agent.values()
-            for finding in result.findings
-        ]
+        if self._findings_cache is None:
+            self._findings_cache = [
+                finding
+                for result in self.findings_by_agent.values()
+                for finding in result.findings
+            ]
+        return self._findings_cache
 
     def unique_sources(self) -> list[dict[str, str]]:
         seen: set[tuple[str, str]] = set()

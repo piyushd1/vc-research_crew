@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Type
 
-import pdfplumber
 from crewai.tools import BaseTool
+import pdfplumber
 from pydantic import BaseModel, Field
 
 from my_agents.configuration import canonicalize_profile_key
@@ -84,7 +83,7 @@ class DirectoryManifestInput(BaseModel):
 class DirectoryManifestTool(BaseTool):
     name: str = "directory_manifest"
     description: str = "Lists PDF and CSV files in a data room directory."
-    args_schema: Type[BaseModel] = DirectoryManifestInput
+    args_schema: type[BaseModel] = DirectoryManifestInput
     docs_root: str | None = None
 
     def _resolve_root(self, path: str) -> Path:
@@ -121,7 +120,7 @@ class PDFExcerptInput(BaseModel):
 class PDFExcerptTool(BaseTool):
     name: str = "pdf_excerpt"
     description: str = "Extracts text from the first few pages of a PDF file."
-    args_schema: Type[BaseModel] = PDFExcerptInput
+    args_schema: type[BaseModel] = PDFExcerptInput
     docs_root: str | None = None
 
     def _resolve_path(self, path: str) -> Path:
@@ -158,7 +157,7 @@ class CSVPreviewInput(BaseModel):
 class CSVPreviewTool(BaseTool):
     name: str = "csv_preview"
     description: str = "Returns CSV headers and a small preview for diligence review."
-    args_schema: Type[BaseModel] = CSVPreviewInput
+    args_schema: type[BaseModel] = CSVPreviewInput
     docs_root: str | None = None
 
     def _resolve_path(self, path: str) -> Path:
@@ -206,7 +205,7 @@ class IndiaSourceRegistryInput(BaseModel):
 class IndiaSourceRegistryTool(BaseTool):
     name: str = "india_source_registry"
     description: str = "Returns India-first public source guidance for the given workflow and agent."
-    args_schema: Type[BaseModel] = IndiaSourceRegistryInput
+    args_schema: type[BaseModel] = IndiaSourceRegistryInput
 
     def _run(self, workflow: str, sector: str, agent_name: str) -> str:
         canonical_sector = canonicalize_profile_key(sector) or sector
