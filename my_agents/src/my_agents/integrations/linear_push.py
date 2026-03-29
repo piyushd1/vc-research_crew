@@ -5,7 +5,12 @@ from pathlib import Path
 
 import httpx
 
-from my_agents.schemas import FindingsBundle, IntegrationsConfig, OutputProfile, WorkflowType
+from my_agents.schemas import (
+    FindingsBundle,
+    IntegrationsConfig,
+    OutputProfile,
+    WorkflowType,
+)
 
 
 LINEAR_URL = "https://api.linear.app/graphql"
