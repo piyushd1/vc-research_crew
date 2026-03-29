@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from my_agents.configuration import DEFAULT_CONFIG_DIR, canonicalize_profile_key, load_app_config
+from my_agents.configuration import (
+    DEFAULT_CONFIG_DIR,
+    canonicalize_profile_key,
+    load_app_config,
+)
 
 
 class ConfigurationTests(unittest.TestCase):

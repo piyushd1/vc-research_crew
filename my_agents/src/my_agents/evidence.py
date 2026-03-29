@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 from my_agents.schemas import (
     AgentFindingResult,
@@ -25,9 +25,11 @@ class EvidenceRegistry:
     source_profile: SourcePriorityConfig
     findings_by_agent: dict[str, AgentFindingResult] = field(default_factory=dict)
     _claims: dict[str, list[FindingRecord]] = field(default_factory=lambda: defaultdict(list))
+    _cached_findings: list[FindingRecord] | None = field(default=None, repr=False, init=False)
 
     def add_result(self, result: AgentFindingResult) -> None:
         self.findings_by_agent[result.agent_name] = result
+        self._cached_findings = None
         for finding in result.findings:
             claim_key = _normalize_key(finding)
             self._claims[claim_key].append(finding)
@@ -50,11 +52,13 @@ class EvidenceRegistry:
             record.conflict_level = conflict_level
 
     def findings(self) -> list[FindingRecord]:
-        return [
-            finding
-            for result in self.findings_by_agent.values()
-            for finding in result.findings
-        ]
+        if getattr(self, '_cached_findings', None) is None:
+            self._cached_findings = [
+                finding
+                for result in self.findings_by_agent.values()
+                for finding in result.findings
+            ]
+        return self._cached_findings
 
     def unique_sources(self) -> list[dict[str, str]]:
         seen: set[tuple[str, str]] = set()
@@ -69,10 +73,14 @@ class EvidenceRegistry:
 
     def summary(self, limit: int = 10) -> str:
         lines: list[str] = []
-        for finding in self.findings()[:limit]:
+        count = 0
+        for finding in self.findings():
+            if count >= limit:
+                break
             lines.append(
                 f"- {finding.claim} | source={finding.source_ref} | confidence={finding.confidence:.2f}"
             )
+            count += 1
         return "\n".join(lines) if lines else "No findings collected yet."
 
     def deterministic_audit(self, required_citations: bool = True) -> AuditResult:

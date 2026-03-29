@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import unittest
-from my_agents.schemas import FindingsBundle, ScorecardSummary, ScorecardDimension, WorkflowType
+
+from my_agents.renderers.full_report_renderer import render_full_report
 from my_agents.renderers.ic_memo_renderer import render_ic_memo
 from my_agents.renderers.one_pager_renderer import render_one_pager
-from my_agents.renderers.full_report_renderer import render_full_report
+from my_agents.schemas import (
+    FindingsBundle,
+    ScorecardDimension,
+    ScorecardSummary,
+    WorkflowType,
+)
+
 
 class RendererTests(unittest.TestCase):
     def setUp(self) -> None:
