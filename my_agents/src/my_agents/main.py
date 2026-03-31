@@ -77,10 +77,6 @@ def replay():
     return run()
 
 
-def train():
-    raise SystemExit("Training is not implemented for this VC workflow app.")
-
-
 def test():
     raise SystemExit("Use the project test suite instead of the starter template command.")
 

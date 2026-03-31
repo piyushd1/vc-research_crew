@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 import os
-from typing import Iterable
 
 from my_agents.schemas import LLMConfig, LLMProvider
 
@@ -98,9 +98,8 @@ def build_llm(config: LLMConfig):
     )
 
 def build_eval_llm(config: LLMConfig):
-    from crewai.llm import LLM
     if not config.eval_model:
         return build_llm(config)
-        
+
     eval_config = config.model_copy(update={"model": config.eval_model})
     return build_llm(eval_config)
