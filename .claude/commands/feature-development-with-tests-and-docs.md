@@ -10,16 +10,16 @@ Use this workflow when working on **feature-development-with-tests-and-docs** in
 
 ## Goal
 
-Implements a new feature or enhancement, updating both implementation and corresponding tests, sometimes with documentation.
+Implements a new feature, updates or creates relevant source files, adds or updates tests, and updates documentation if needed.
 
 ## Common Files
 
 - `my_agents/src/my_agents/controller.py`
-- `my_agents/src/my_agents/configuration.py`
 - `my_agents/src/my_agents/llm_policy.py`
-- `my_agents/src/my_agents/evidence.py`
-- `my_agents/src/my_agents/evals/judge.py`
-- `my_agents/src/my_agents/integrations/linear_push.py`
+- `my_agents/src/my_agents/renderers/*.py`
+- `my_agents/src/my_agents/tools/*.py`
+- `my_agents/src/my_agents/evals/*.py`
+- `my_agents/src/my_agents/schemas.py`
 
 ## Suggested Sequence
 
@@ -30,9 +30,11 @@ Implements a new feature or enhancement, updating both implementation and corres
 
 ## Typical Commit Signals
 
-- Edit or add implementation files (e.g. controller.py, configuration.py, llm_policy.py, evidence.py, etc.)
-- Update or add corresponding test files (e.g. tests/test_controller_flow.py, tests/test_configuration.py, tests/test_eval_benchmarks.py, etc.)
-- Optionally update documentation (e.g. README.md)
+- Edit or create implementation files in src/ (e.g., controller.py, llm_policy.py, renderers, tools, etc.)
+- Update or add corresponding test files in tests/ (e.g., test_controller_flow.py, test_renderers.py, test_eval_benchmarks.py, test_quick_mode.py, test_e2e_smoke.py)
+- Update documentation or configuration files if needed (e.g., README.md, pyproject.toml, pytest.ini)
+- Add or update sample data or config (e.g., sample_briefs/)
+- Commit all related changes together
 
 ## Notes
 
