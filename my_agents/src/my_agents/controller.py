@@ -336,9 +336,9 @@ class VCResearchController:
         elif request.company_name:
             brief = Brief(
                 company_name=request.company_name,
-                sector=request.sector if request.sector is not None else "general",
-                stage=request.stage if request.stage is not None else "unknown",
-                geography=request.geography if request.geography is not None else "India",
+                sector=request.sector or "general",
+                stage=request.stage or "unknown",
+                geography=request.geography or "India",
                 focus_instructions=request.focus_instructions,
                 exclude_instructions=request.exclude_instructions,
             )
@@ -474,6 +474,12 @@ class VCResearchController:
             "When adding downstream_flags.for_agent, use ONLY these exact agent ids:\n"
             f"{workflow_agent_ids}\n{control_agent_ids}\n\n"
             f"{scoring_block}"
+            "Research discipline rules:\n"
+            "- Use at most 4 external web searches unless the evidence is clearly insufficient.\n"
+            "- Prioritize sources in this order: official company or regulator sources, high-signal India business media, one customer or marketplace proof point, then one market or competitor check.\n"
+            "- Avoid repetitive query variants once you already have enough evidence to answer.\n"
+            "- Do not use social posts or reposted snippets for core claims unless corroborated by a stronger source.\n"
+            "- If evidence is weak or conflicting, record an open question instead of stretching the claim.\n\n"
             "Use suggested_section_keys only from this allowed set:\n"
             + "\n".join(f"- {item}" for item in sorted(ALLOWED_SECTION_KEYS))
             + "\n\n"
