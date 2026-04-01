@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 import os
-from typing import Iterable
 
 from my_agents.schemas import LLMConfig, LLMProvider
 
@@ -96,3 +96,10 @@ def build_llm(config: LLMConfig):
         temperature=config.temperature,
         max_tokens=config.max_tokens,
     )
+
+def build_eval_llm(config: LLMConfig):
+    if not config.eval_model:
+        return build_llm(config)
+
+    eval_config = config.model_copy(update={"model": config.eval_model})
+    return build_llm(eval_config)

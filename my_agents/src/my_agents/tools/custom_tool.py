@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Type
 
-import pdfplumber
 from crewai.tools import BaseTool
+import pdfplumber
 from pydantic import BaseModel, Field
 
 from my_agents.configuration import canonicalize_profile_key
@@ -45,6 +44,8 @@ SECTOR_SOURCE_HINTS = {
     "fintech": [
         "RBI, SEBI, NPCI, and MCA / ROC references",
         "Regulated entity disclosures and rail-level ecosystem evidence",
+        "NBFC, P2P lending, digital lending guidelines, and FLDG norms",
+        "Credit bureau signals, UPI/BBPS adoption, and co-lending evidence",
     ],
     "healthtech": [
         "CDSCO, MoHFW, NHA, ABDM, NABH, NABL, and provider partner references",
@@ -66,6 +67,12 @@ SECTOR_SOURCE_HINTS = {
         "Product docs, pricing pages, trust centers, and changelogs",
         "GitHub, benchmark artifacts, customer case studies, and integration ecosystems",
     ],
+    "generic": [
+        "Company website, product documentation, and public filings",
+        "Indian startup media (Inc42, YourStory, Entrackr, The Ken, ET Startup)",
+        "Government and regulatory disclosures relevant to the sector",
+        "MCA / ROC filings, industry reports, and press coverage",
+    ],
 }
 
 
@@ -76,7 +83,7 @@ class DirectoryManifestInput(BaseModel):
 class DirectoryManifestTool(BaseTool):
     name: str = "directory_manifest"
     description: str = "Lists PDF and CSV files in a data room directory."
-    args_schema: Type[BaseModel] = DirectoryManifestInput
+    args_schema: type[BaseModel] = DirectoryManifestInput
     docs_root: str | None = None
 
     def _resolve_root(self, path: str) -> Path:
@@ -113,7 +120,7 @@ class PDFExcerptInput(BaseModel):
 class PDFExcerptTool(BaseTool):
     name: str = "pdf_excerpt"
     description: str = "Extracts text from the first few pages of a PDF file."
-    args_schema: Type[BaseModel] = PDFExcerptInput
+    args_schema: type[BaseModel] = PDFExcerptInput
     docs_root: str | None = None
 
     def _resolve_path(self, path: str) -> Path:
@@ -150,7 +157,7 @@ class CSVPreviewInput(BaseModel):
 class CSVPreviewTool(BaseTool):
     name: str = "csv_preview"
     description: str = "Returns CSV headers and a small preview for diligence review."
-    args_schema: Type[BaseModel] = CSVPreviewInput
+    args_schema: type[BaseModel] = CSVPreviewInput
     docs_root: str | None = None
 
     def _resolve_path(self, path: str) -> Path:
@@ -198,7 +205,7 @@ class IndiaSourceRegistryInput(BaseModel):
 class IndiaSourceRegistryTool(BaseTool):
     name: str = "india_source_registry"
     description: str = "Returns India-first public source guidance for the given workflow and agent."
-    args_schema: Type[BaseModel] = IndiaSourceRegistryInput
+    args_schema: type[BaseModel] = IndiaSourceRegistryInput
 
     def _run(self, workflow: str, sector: str, agent_name: str) -> str:
         canonical_sector = canonicalize_profile_key(sector) or sector
@@ -218,7 +225,9 @@ class IndiaSourceRegistryTool(BaseTool):
             "Audited financials and uploaded data room documents",
             "Indian business media and startup databases",
         ]
-        sector_specific = SECTOR_SOURCE_HINTS.get(canonical_sector, [])
+        sector_specific = SECTOR_SOURCE_HINTS.get(
+            canonical_sector, SECTOR_SOURCE_HINTS.get("generic", [])
+        )
         lines = [
             f"Workflow: {workflow}",
             f"Sector: {canonical_sector}",

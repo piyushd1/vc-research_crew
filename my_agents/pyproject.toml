@@ -13,10 +13,8 @@ dependencies = [
 [project.scripts]
 my_agents = "my_agents.main:run"
 run_crew = "my_agents.main:run"
-train = "my_agents.main:train"
 replay = "my_agents.main:replay"
 test = "my_agents.main:test"
-run_with_trigger = "my_agents.main:run_with_trigger"
 
 [build-system]
 requires = ["hatchling"]

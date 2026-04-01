@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from my_agents.configuration import DEFAULT_CONFIG_DIR, canonicalize_profile_key, load_app_config
+from my_agents.configuration import (
+    DEFAULT_CONFIG_DIR,
+    canonicalize_profile_key,
+    load_app_config,
+)
 
 
 class ConfigurationTests(unittest.TestCase):
@@ -37,6 +41,12 @@ class ConfigurationTests(unittest.TestCase):
         for sector in self.config.scorecard_overlays:
             with self.subTest(sector=sector):
                 self.assertEqual(sum(self.config.resolve_score_weights(sector).values()), 100)
+
+
+
+    def test_invalid_source_profile_override_raises_value_error(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Unknown sources profile 'invalid_profile'"):
+            self.config.resolve_source_profile(sector="fintech", profile_override="invalid_profile")
 
 
 if __name__ == "__main__":
