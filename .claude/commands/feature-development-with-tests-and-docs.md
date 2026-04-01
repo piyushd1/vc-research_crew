@@ -10,16 +10,14 @@ Use this workflow when working on **feature-development-with-tests-and-docs** in
 
 ## Goal
 
-Implements a new feature or enhancement, updating both implementation and corresponding tests, sometimes with documentation.
+Implements a new feature, adds corresponding tests, and updates documentation.
 
 ## Common Files
 
-- `my_agents/src/my_agents/controller.py`
-- `my_agents/src/my_agents/configuration.py`
-- `my_agents/src/my_agents/llm_policy.py`
-- `my_agents/src/my_agents/evidence.py`
-- `my_agents/src/my_agents/evals/judge.py`
-- `my_agents/src/my_agents/integrations/linear_push.py`
+- `my_agents/src/my_agents/*.py`
+- `my_agents/tests/*.py`
+- `my_agents/README.md`
+- `docs/**/*.mdx`
 
 ## Suggested Sequence
 
@@ -30,9 +28,9 @@ Implements a new feature or enhancement, updating both implementation and corres
 
 ## Typical Commit Signals
 
-- Edit or add implementation files (e.g. controller.py, configuration.py, llm_policy.py, evidence.py, etc.)
-- Update or add corresponding test files (e.g. tests/test_controller_flow.py, tests/test_configuration.py, tests/test_eval_benchmarks.py, etc.)
-- Optionally update documentation (e.g. README.md)
+- Implement or modify feature logic in src/ files.
+- Add or update tests in tests/ files.
+- Update or add documentation in README.md or docs/.
 
 ## Notes
 
