@@ -118,6 +118,7 @@ class LLMConfig(BaseModel):
             "nemotron",
         ]
     )
+    synthesis_model: str | None = None
     eval_model: str | None = None
 
 

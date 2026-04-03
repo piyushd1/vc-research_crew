@@ -21,6 +21,12 @@ _INTERNAL_ANALYSIS_AGENTS = {
     "valuation_scenarios_analyst",
 }
 
+# India data tool assignments
+_TOFLER_AGENTS = {"financial_researcher", "founder_signal_analyst"}
+_TRACXN_AGENTS = {"financial_researcher", "market_mapper", "startup_sourcer"}
+_CRUNCHBASE_AGENTS = {"financial_researcher", "startup_sourcer"}
+_PLAYSTORE_AGENTS = {"marketing_gtm_researcher", "customer_competition_analyst"}
+
 
 def build_tools(
     brief: Brief,
@@ -74,6 +80,26 @@ def build_tools(
 
         if agent_name in _DEEP_RESEARCH_AGENTS:
             tools.append(TavilyResearchTool())
+
+        # India-specific data tools (use Tavily under the hood)
+        from my_agents.tools.india_data_tools import (
+            CrunchbaseCompanyTool,
+            GooglePlayStoreTool,
+            IndiaJobSignalTool,
+            ToflerCompanyTool,
+            TracxnCompanyTool,
+        )
+
+        if agent_name in _TOFLER_AGENTS:
+            tools.append(ToflerCompanyTool())
+        if agent_name in _TRACXN_AGENTS:
+            tools.append(TracxnCompanyTool())
+        if agent_name in _CRUNCHBASE_AGENTS:
+            tools.append(CrunchbaseCompanyTool())
+        if agent_name in _PLAYSTORE_AGENTS:
+            tools.append(GooglePlayStoreTool())
+        if agent_name not in _INTERNAL_ANALYSIS_AGENTS:
+            tools.append(IndiaJobSignalTool())
 
     # Financial signal search (Serper-based, for financial specialists)
     if (

@@ -21,7 +21,7 @@ from my_agents.evals.report_renderer import render_eval_report, render_standards
 from my_agents.evidence import EvidenceRegistry, combine_open_questions
 from my_agents.html_utils import markdownish_to_html_document
 from my_agents.integrations.linear_push import push_linear_issue
-from my_agents.llm_policy import build_llm
+from my_agents.llm_policy import build_llm, build_synthesis_llm
 from my_agents.pdf_export import export_pdf
 from my_agents.report_standards import assess_report_standards
 from my_agents.renderers import render_full_report, render_ic_memo, render_one_pager
@@ -355,16 +355,18 @@ class VCResearchController:
                     raise SystemExit("Run aborted at manual checkpoint.")
 
         logger.info("Starting synthesis and audit", extra={"step": "synthesis"})
-        audit = self._run_evidence_audit(config, llm, evidence, request.verbose)
+        synthesis_llm = build_synthesis_llm(config.llm)
+        audit = self._run_evidence_audit(config, synthesis_llm, evidence, request.verbose)
         bundle = self._run_report_synthesizer(
             config=config,
-            llm=llm,
+            llm=synthesis_llm,
             brief=brief,
             state=state,
             evidence=evidence,
             audit=audit,
             weights=weights,
             verbose=request.verbose,
+            chroma_collection=chroma_collection,
         )
 
         bundle_path = run_dir / "findings_bundle.json"
@@ -481,6 +483,18 @@ class VCResearchController:
                 self.print_fn(f"Warning: Evals skipped due to error: {ev_exc}")
 
         self._update_latest_symlink(run_dir)
+
+        # Create clean deliverables folder
+        self._write_deliverable(
+            run_dir=run_dir,
+            brief=brief,
+            workflow=state.workflow,
+            output_profile=selected_profile,
+            report_html_path=report_html_path,
+            one_pager_path=one_pager_path,
+            pdf_path=pdf_path,
+        )
+
         logger.info("Run finished", extra={"step": "finish"})
 
         if fh:
@@ -783,6 +797,28 @@ class VCResearchController:
         except Exception:
             return deterministic
 
+    def _build_evidence_packet(self, state: RunState, evidence: EvidenceRegistry) -> str:
+        """Build a clean structured evidence packet for the synthesizer."""
+        lines: list[str] = []
+        for agent_name, result in state.findings.items():
+            lines.append(f"\n=== {agent_name} ===")
+            lines.append(f"Summary: {result.summary}")
+            if result.findings:
+                lines.append("Findings:")
+                for f in result.findings:
+                    lines.append(
+                        f"  - {f.claim} | source={f.source_ref} | confidence={f.confidence:.2f}"
+                    )
+            if result.dimension_scores:
+                lines.append("Scores:")
+                for s in result.dimension_scores:
+                    lines.append(f"  - {s.dimension}: {s.score}/5 ({s.rationale})")
+            if result.open_questions:
+                lines.append("Open questions:")
+                for q in result.open_questions:
+                    lines.append(f"  - {q}")
+        return "\n".join(lines)
+
     def _run_report_synthesizer(
         self,
         config: AppConfig,
@@ -793,6 +829,7 @@ class VCResearchController:
         audit: AuditResult,
         weights: dict[str, int],
         verbose: bool,
+        chroma_collection: object | None = None,
     ) -> FindingsBundle:
         scorecard = self._build_scorecard(
             list(state.findings.values()),
@@ -801,6 +838,18 @@ class VCResearchController:
             audit,
         )
         fallback_bundle = self._build_fallback_bundle(config, brief, state, evidence, audit, scorecard)
+
+        # Build RAG tools for synthesizer
+        synth_tools: list[object] = []
+        if chroma_collection is not None:
+            try:
+                from my_agents.tools.rag_tool import DataRoomSearchTool
+                synth_tools.append(DataRoomSearchTool(collection=chroma_collection))
+            except Exception:
+                pass
+
+        evidence_packet = self._build_evidence_packet(state, evidence)
+
         prompt = (
             "Synthesize the VC diligence record into a structured findings bundle.\n\n"
             f"Company: {brief.company_name}\n"
@@ -811,23 +860,24 @@ class VCResearchController:
             "- Use specific data points: numbers, dates, named sources\n"
             "- No marketing language ('revolutionary', 'game-changing', 'disruptive')\n"
             "- Acknowledge gaps honestly rather than padding with vague statements\n"
-            "- Each section should be 100-300 words with at least 2 specific data points\n\n"
-            "--- SECTION REQUIREMENTS ---\n"
-            "executive_summary: 3-4 sentences. Verdict first, then 2 key evidence points, then biggest risk.\n"
-            "company_snapshot: Founded when, by whom, what they do, funding to date, stage, key metrics.\n"
-            "market_landscape: TAM/SAM/SOM, 3-5 competitors named, India-specific dynamics.\n"
-            "financial_analysis: Revenue model, growth rate, unit economics (or proxies), burn/runway.\n"
-            "product_technology: What the product does, tech differentiation, IP, engineering signals.\n"
-            "founder_assessment: Founder background, domain expertise, team completeness.\n"
-            "gtm_momentum: GTM motion type, traction metrics, customer acquisition evidence.\n"
-            "regulatory_compliance: Applicable regulations, compliance status, risks.\n"
-            "risk_register: Top 3-5 risks with probability and impact assessment.\n"
-            "investment_recommendation: INVEST/PASS/CONDITIONAL with 2-3 reasons.\n\n"
-            "If a section has NO real evidence from the agents, write: "
-            "'Insufficient evidence. Key gap: [what is missing].'\n\n"
-            f"Scorecard: {scorecard.model_dump_json(indent=2)}\n"
-            f"Audit: {audit.model_dump_json(indent=2)}\n"
-            f"Findings: {json.dumps({name: result.model_dump() for name, result in state.findings.items()}, indent=2)}\n"
+            "- EVERY section must hit its word target. Short sections = failed report.\n\n"
+            "--- SECTION WORD TARGETS (you MUST hit these) ---\n"
+            "executive_summary: 80-150 words. Verdict first, then 2 key evidence points, then biggest risk.\n"
+            "company_snapshot: 100-200 words. Founded when, by whom, funding to date, key metrics.\n"
+            "market_landscape: 200-400 words. TAM/SAM/SOM, 3-5 competitors named, India dynamics.\n"
+            "financial_analysis: 200-400 words. Revenue model, growth rate, unit economics, burn/runway.\n"
+            "product_technology: 150-300 words. Product, tech differentiation, IP, engineering signals.\n"
+            "founder_assessment: 100-200 words. Founder background, domain expertise, team.\n"
+            "gtm_momentum: 150-300 words. GTM motion, traction metrics, customer acquisition.\n"
+            "regulatory_compliance: 100-200 words. Applicable regulations, compliance status, risks.\n"
+            "risk_register: 150-300 words. Top 3-5 risks with probability and impact.\n"
+            "investment_recommendation: 100-200 words. INVEST/PASS/CONDITIONAL with 2-3 reasons.\n\n"
+            "If a section has thin evidence, use the data_room_search tool to find additional data.\n"
+            "If still thin after search, write what you know and note the gap explicitly.\n\n"
+            f"Scorecard:\n{scorecard.model_dump_json(indent=2)}\n\n"
+            f"Audit:\n{audit.model_dump_json(indent=2)}\n\n"
+            f"Agent Evidence:\n{evidence_packet}\n\n"
+            f"All citations: {json.dumps([s['source_ref'] for s in evidence.unique_sources()], indent=2)}\n"
         )
         try:
             result = self.runner.run_agent(
@@ -836,7 +886,7 @@ class VCResearchController:
                 prompt=prompt,
                 response_model=FindingsBundle,
                 llm=llm,
-                tools=[],
+                tools=synth_tools,
                 verbose=verbose,
             )
             if not isinstance(result, FindingsBundle):
@@ -853,9 +903,107 @@ class VCResearchController:
                 result.open_questions = fallback_bundle.open_questions
             if not result.evidence_gaps:
                 result.evidence_gaps = fallback_bundle.evidence_gaps
+
+            # --- Reflection loop: check quality, retry if too short ---
+            result = self._reflection_pass(
+                result, config, llm, brief, state, evidence, audit,
+                scorecard, fallback_bundle, synth_tools, verbose,
+            )
+
             return result
         except Exception:
             return fallback_bundle
+
+    def _reflection_pass(
+        self,
+        bundle: FindingsBundle,
+        config: AppConfig,
+        llm: object,
+        brief: Brief,
+        state: RunState,
+        evidence: EvidenceRegistry,
+        audit: AuditResult,
+        scorecard: ScorecardSummary,
+        fallback_bundle: FindingsBundle,
+        synth_tools: list[object],
+        verbose: bool,
+    ) -> FindingsBundle:
+        """Single-pass reflection: if report is too short, retry synthesis with feedback."""
+        try:
+            selected_profile = state.output_profile
+            if selected_profile == OutputProfile.FULL_REPORT:
+                preliminary = render_full_report(bundle)
+            else:
+                preliminary = render_ic_memo(bundle)
+
+            standards = assess_report_standards(
+                bundle=bundle,
+                workflow=state.workflow,
+                output_profile=selected_profile,
+                rendered_output=preliminary,
+                required_sections=config.output_profiles[selected_profile.value].sections,
+            )
+
+            from my_agents.report_standards import WORD_RANGES
+            target_min = WORD_RANGES[selected_profile][0]
+
+            # Only retry if significantly short
+            if standards.word_count >= target_min * 0.6:
+                return bundle
+
+            self.print_fn(
+                f"Report quality check: {standards.word_count} words "
+                f"(target min: {target_min}). Running refinement pass..."
+            )
+
+            thin_sections = [
+                s for s in standards.missing_sections
+            ] + [
+                s for s in standards.present_sections
+                if len(bundle.sections.get(s, "").split()) < 50
+            ]
+
+            refinement_prompt = (
+                "REFINEMENT PASS — The previous synthesis was too short.\n\n"
+                f"Current word count: {standards.word_count} (target: {target_min}+)\n"
+                f"Thin or missing sections: {', '.join(thin_sections) if thin_sections else 'general — all sections need more depth'}\n\n"
+                "Expand EVERY section with more specific data points from the evidence.\n"
+                "Use the data_room_search tool to find additional evidence for thin sections.\n"
+                "Each section MUST hit its word target.\n\n"
+                f"Current bundle to expand:\n{bundle.model_dump_json(indent=2)}\n\n"
+                f"Agent evidence:\n{self._build_evidence_packet(state, evidence)}\n"
+            )
+
+            try:
+                refined = self.runner.run_agent(
+                    agent_name="report_synthesizer",
+                    spec=config.agents["report_synthesizer"],
+                    prompt=refinement_prompt,
+                    response_model=FindingsBundle,
+                    llm=llm,
+                    tools=synth_tools,
+                    verbose=verbose,
+                )
+                if not isinstance(refined, FindingsBundle):
+                    refined = FindingsBundle.model_validate(refined.model_dump())
+                refined.scorecard = scorecard
+                refined.citations = fallback_bundle.citations
+
+                # Use refined only if it's actually better
+                refined_word_count = sum(len(s.split()) for s in refined.sections.values())
+                original_word_count = sum(len(s.split()) for s in bundle.sections.values())
+                if refined_word_count > original_word_count:
+                    self.print_fn(
+                        f"Refinement improved report: {original_word_count} -> {refined_word_count} words"
+                    )
+                    return refined
+            except Exception:
+                pass
+
+        except Exception:
+            pass
+
+        return bundle
 
     def _build_fallback_bundle(
         self,
@@ -1269,6 +1417,40 @@ class VCResearchController:
                 f"Warning: Could not create 'latest' symlink at {latest_link}. "
                 "On Windows, symlinks may require developer mode or admin privileges."
             )
+
+    def _write_deliverable(
+        self,
+        run_dir: Path,
+        brief: Brief,
+        workflow: WorkflowType,
+        output_profile: OutputProfile,
+        report_html_path: Path | None,
+        one_pager_path: Path | None,
+        pdf_path: Path | None,
+    ) -> None:
+        """Copy final reports to a clean deliverables/ folder with nice names."""
+        import shutil
+
+        project_root = self.project_root or Path(__file__).resolve().parents[2]
+        deliverables_dir = project_root / "deliverables"
+        deliverables_dir.mkdir(parents=True, exist_ok=True)
+
+        date_str = self.now_fn().strftime("%Y-%m-%d")
+        clean_name = f"{brief.company_name}-{workflow.value}-{output_profile.value}-{date_str}"
+
+        try:
+            source_html = one_pager_path if output_profile == OutputProfile.ONE_PAGER else report_html_path
+            if source_html and source_html.exists():
+                dest_html = deliverables_dir / f"{clean_name}.html"
+                shutil.copy2(source_html, dest_html)
+                self.print_fn(f"Deliverable: {dest_html}")
+
+            if pdf_path and pdf_path.exists():
+                dest_pdf = deliverables_dir / f"{clean_name}.pdf"
+                shutil.copy2(pdf_path, dest_pdf)
+                self.print_fn(f"Deliverable: {dest_pdf}")
+        except Exception as exc:
+            self.print_fn(f"Warning: Could not create deliverable: {exc}")
 
     @staticmethod
     def _slugify(value: str) -> str:
