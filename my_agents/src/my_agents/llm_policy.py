@@ -87,6 +87,14 @@ def build_llm(config: LLMConfig):
         max_tokens=config.max_tokens,
     )
 
+def build_synthesis_llm(config: LLMConfig):
+    if not config.synthesis_model:
+        return build_llm(config)
+
+    synthesis_config = config.model_copy(update={"model": config.synthesis_model})
+    return build_llm(synthesis_config)
+
+
 def build_eval_llm(config: LLMConfig):
     if not config.eval_model:
         return build_llm(config)

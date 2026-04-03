@@ -1,5 +1,5 @@
 provider: openrouter
-model: openrouter/deepseek/deepseek-r1
+model: openrouter/deepseek/deepseek-r1-0528
 base_url: https://openrouter.ai/api/v1
 api_key_env: OPENROUTER_API_KEY
 temperature: 0.2
@@ -23,14 +23,23 @@ allowed_model_prefixes:
   - falcon
   - olmo
   - nemotron
+  - z-ai/
+  - openrouter/z-ai/
+  - xiaomi/
+  - openrouter/xiaomi/
+  - bytedance/
+  - openrouter/bytedance/
 
-# Model selection guide (OpenRouter, cheapest to best):
+# Model selection:
 #
-# Research agents (need reasoning + tool use):
-#   - openrouter/deepseek/deepseek-r1       (best reasoning, very cheap ~$0.55/M input)
-#   - openrouter/qwen/qwen3-235b-a22b       (strong structured output, cheap)
-#   - openrouter/deepseek/deepseek-v3.2     (fast, cheaper, less reasoning)
+# Research agents (reasoning + tool use):
+#   model: openrouter/deepseek/deepseek-r1-0528  (~$0.45/M input)
 #
-# Evaluation model (LLM-as-a-judge):
-#   - openrouter/meta-llama/llama-3.3-70b-instruct (reliable JSON, cheap)
-eval_model: openrouter/meta-llama/llama-3.3-70b-instruct
+# Synthesis/thinking (strong writing + reasoning for report generation):
+#   synthesis_model: openrouter/z-ai/glm-5  ($0.72/M input, near GPT-5.2 level)
+#
+# Evaluation (LLM-as-a-judge, structured JSON output):
+#   eval_model: openrouter/qwen/qwen3.6-plus:free  (free tier)
+
+synthesis_model: openrouter/z-ai/glm-5
+eval_model: openrouter/qwen/qwen3.6-plus:free

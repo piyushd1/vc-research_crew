@@ -42,9 +42,11 @@ startup_sourcer:
   source_focus: ["company_site", "startup_media", "public_web"]
   scoring_dimensions: ["market_size_and_growth", "founder_quality_and_signal"]
   prompt_notes:
+    - "OUTPUT: Your summary should be 200-400 words with at least 5 specific data points."
     - "Always include: company name, founding year, founders, location, funding rounds (amount + investors), product description, target customer."
     - "If data is missing, explicitly state what's missing rather than omitting."
     - "Use Inc42, YourStory, Entrackr, The Ken, Economic Times Startup for India startup data."
+    - "Use tracxn_company_lookup and crunchbase_company_lookup tools to get funding data."
   failure_guidance: >
     If you cannot find detailed information, return the company name, website, and whatever basic
     facts are publicly available. A thin but accurate snapshot is better than nothing. Mark confidence
@@ -73,8 +75,10 @@ market_mapper:
   source_focus: ["public_web", "startup_media", "regulator"]
   scoring_dimensions: ["market_size_and_growth"]
   prompt_notes:
+    - "OUTPUT: Your summary should be 300-500 words with at least 5 specific data points."
     - "FRAMEWORK: Use Porter's Five Forces (rivalry, new entrants, substitutes, buyer power, supplier power)."
     - "Name 3-5 direct competitors with their funding, revenue (if known), and differentiation."
+    - "Use tracxn_company_lookup to find competitor funding data."
     - "Provide TAM/SAM/SOM estimates with source citations."
     - "Identify India-specific tailwinds (policy, demographics, digital adoption) and headwinds (regulation, infrastructure)."
   failure_guidance: >
@@ -120,8 +124,10 @@ financial_researcher:
     - "SCORING RUBRIC: 5=strong unit economics, clear profitability path; 4=good growth, improving economics; 3=early revenue, unclear economics; 2=pre-revenue or deeply negative; 1=no revenue signal"
     - "RED FLAGS: Revenue concentration >50% single customer, burn multiple >3x, negative gross margins"
     - "GREEN FLAGS: Net revenue retention >120%, CAC payback <18mo, improving gross margins QoQ"
+    - "OUTPUT: Your summary should be 300-500 words with at least 5 specific data points and numbers."
+    - "Use tofler_company_lookup to get MCA filing data (CIN, capital, directors, revenue bracket)."
+    - "Use tracxn_company_lookup and crunchbase_company_lookup for funding history and valuation."
     - "Check MCA filings for reported revenue ranges."
-    - "Check Tracxn/Crunchbase via web search for funding history."
   failure_guidance: >
     Financial data for private Indian companies is often unavailable. This is EXPECTED.
     When data is sparse: (1) Check MCA/ROC filings for revenue brackets, (2) Estimate burn from
@@ -139,9 +145,10 @@ marketing_gtm_researcher:
   source_focus: ["company_site", "public_media", "uploaded_private"]
   scoring_dimensions: ["gtm_traction_and_momentum"]
   prompt_notes:
+    - "OUTPUT: Your summary should be 200-400 words with at least 4 specific data points."
     - "FRAMEWORK: Classify GTM motion (PLG, sales-led, marketplace, channel-led)."
-    - "Check app store rankings and reviews (Google Play, App Store) for consumer companies."
-    - "Check website traffic signals (SimilarWeb mentions in media, Alexa mentions)."
+    - "Use google_play_store_lookup to get app ratings, downloads, and reviews for consumer companies."
+    - "Check website traffic signals (SimilarWeb mentions in media)."
     - "Look for customer logos, case studies, partnership announcements."
     - "Assess pricing strategy: freemium, subscription, usage-based, take-rate."
   failure_guidance: >
